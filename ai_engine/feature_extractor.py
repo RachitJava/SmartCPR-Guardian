@@ -154,22 +154,22 @@ class PatientVitalsSimulator:
     """
 
     @staticmethod
-    def normal(noise: float = 0.05) -> Tuple[np.ndarray, Dict]:
+    def normal(noise: float = 0.05, hr: float = 72, spo2: float = 99, bp: float = 120) -> Tuple[np.ndarray, Dict]:
         """Normal sinus rhythm patient."""
         fs = 360
         t = np.linspace(0, 10, 10 * fs)
         # Simulate realistic ECG with P-QRS-T waves
-        hr = 72 + np.random.normal(0, 2)
-        ecg = PatientVitalsSimulator._synthetic_ecg(t, hr, fs, noise)
+        target_hr = hr + np.random.normal(0, 1)
+        ecg = PatientVitalsSimulator._synthetic_ecg(t, target_hr, fs, noise)
         sensors = {
-            "spo2": round(np.random.normal(99, 0.5), 1),
-            "systolic_bp": round(np.random.normal(120, 5), 0),
-            "motion_accel": round(abs(np.random.normal(0.1, 0.05)), 2),
+            "spo2": round(spo2 + np.random.normal(0, 0.2), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 2), 0),
+            "motion_accel": round(abs(np.random.normal(0.1, 0.02)), 2),
         }
         return ecg, sensors
 
     @staticmethod
-    def cardiac_arrest_vfib(noise: float = 0.1) -> Tuple[np.ndarray, Dict]:
+    def cardiac_arrest_vfib(noise: float = 0.1, spo2: float = 75, bp: float = 40) -> Tuple[np.ndarray, Dict]:
         """Ventricular fibrillation — chaotic, high amplitude."""
         fs = 360
         t = np.linspace(0, 10, 10 * fs)
@@ -181,35 +181,62 @@ class PatientVitalsSimulator:
             + noise * np.random.randn(len(t))
         )
         sensors = {
-            "spo2": round(np.random.normal(75, 5), 1),
-            "systolic_bp": round(np.random.normal(40, 10), 0),
+            "spo2": round(spo2 + np.random.normal(0, 2), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 5), 0),
             "motion_accel": round(abs(np.random.normal(0.05, 0.02)), 2),
         }
         return ecg, sensors
 
     @staticmethod
-    def cardiac_arrest_asystole(noise: float = 0.02) -> Tuple[np.ndarray, Dict]:
+    def cardiac_arrest_asystole(noise: float = 0.02, spo2: float = 60, bp: float = 30) -> Tuple[np.ndarray, Dict]:
         """Asystole — flatline ECG."""
         fs = 360
         t = np.linspace(0, 10, 10 * fs)
         ecg = noise * np.random.randn(len(t))  # near-zero signal
         sensors = {
-            "spo2": round(np.random.normal(60, 8), 1),
-            "systolic_bp": round(np.random.normal(30, 8), 0),
+            "spo2": round(spo2 + np.random.normal(0, 2), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 5), 0),
             "motion_accel": 0.0,
         }
         return ecg, sensors
 
     @staticmethod
-    def pre_arrest_bradycardia() -> Tuple[np.ndarray, Dict]:
+    def pre_arrest_bradycardia(hr: float = 18, spo2: float = 87, bp: float = 58) -> Tuple[np.ndarray, Dict]:
         """Severe bradycardia — warning state before arrest."""
         fs = 360
         t = np.linspace(0, 10, 10 * fs)
-        ecg = PatientVitalsSimulator._synthetic_ecg(t, 18, fs, 0.08)
+        ecg = PatientVitalsSimulator._synthetic_ecg(t, hr, fs, 0.08)
         sensors = {
-            "spo2": round(np.random.normal(87, 3), 1),
-            "systolic_bp": round(np.random.normal(58, 8), 0),
-            "motion_accel": round(abs(np.random.normal(0.08, 0.03)), 2),
+            "spo2": round(spo2 + np.random.normal(0, 1), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 3), 0),
+            "motion_accel": round(abs(np.random.normal(0.08, 0.01)), 2),
+        }
+        return ecg, sensors
+
+    @staticmethod
+    def heart_failure(hr: float = 105, spo2: float = 89, bp: float = 95) -> Tuple[np.ndarray, Dict]:
+        """Congestive Heart Failure — low SpO2, elevated HR, low BP."""
+        fs = 360
+        t = np.linspace(0, 10, 10 * fs)
+        # CHF often shows sinus tachycardia or low voltage
+        ecg = PatientVitalsSimulator._synthetic_ecg(t, hr, fs, 0.05) * 0.7 
+        sensors = {
+            "spo2": round(spo2 + np.random.normal(0, 1), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 5), 0),
+            "motion_accel": round(abs(np.random.normal(0.05, 0.01)), 2),
+        }
+        return ecg, sensors
+
+    @staticmethod
+    def tachycardia(hr: float = 190, spo2: float = 94, bp: float = 105) -> Tuple[np.ndarray, Dict]:
+        """Supraventricular Tachycardia — extremely high HR."""
+        fs = 360
+        t = np.linspace(0, 10, 10 * fs)
+        ecg = PatientVitalsSimulator._synthetic_ecg(t, hr, fs, 0.03)
+        sensors = {
+            "spo2": round(spo2 + np.random.normal(0, 1), 1),
+            "systolic_bp": round(bp + np.random.normal(0, 3), 0),
+            "motion_accel": round(abs(np.random.normal(0.12, 0.02)), 2),
         }
         return ecg, sensors
 

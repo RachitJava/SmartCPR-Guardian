@@ -126,6 +126,29 @@ class FoldRMCardiacClassifier:
                 exceptions=[],
                 confidence=0.85
             ),
+
+            # Rule 6: Congestive Heart Failure signs
+            FoldRule(
+                head="heart_failure",
+                conditions=[
+                    ("spo2", "<", 92),                     # persistent low oxygen
+                    ("heart_rate", ">", 100),              # tachycardia response
+                    ("systolic_bp", "<", 110),             # lower BP (decompensation)
+                ],
+                exceptions=[("cardiac_arrest", "==", 1)],  # unless it's already an arrest
+                confidence=0.88
+            ),
+
+            # Rule 7: Supraventricular Tachycardia (SVT)
+            FoldRule(
+                head="tachycardia",
+                conditions=[
+                    ("heart_rate", ">", 180),              # symptomatic threshold
+                    ("systolic_bp", "<", 100),             # low perfusion
+                ],
+                exceptions=[],
+                confidence=0.90
+            ),
         ]
 
     def predict(self, vitals: Dict[str, float]) -> Dict:
@@ -192,7 +215,16 @@ class FoldRMCardiacClassifier:
                 f"BP: {vitals.get('systolic_bp','?')} mmHg"
             )
 
-        lines = ["🚨 CARDIAC ARREST DETECTED\n"]
+        # Handle specific condition headers
+        head_labels = {
+            "cardiac_arrest": "🚨 CARDIAC ARREST DETECTED",
+            "heart_failure": "🫀 HEART FAILURE WARNING",
+            "tachycardia": "🏃 SEVERE TACHYCARDIA ALERT",
+            "pre_arrest_alert": "⚠️ PRE-ARREST ALERT"
+        }
+
+        primary_label = fired_rules[0].head
+        lines = [f"{head_labels.get(primary_label, '🔍 CONDITION DETECTED')}\n"]
         lines.append("Clinical evidence (FOLD-RM rules fired):")
         for i, rule in enumerate(fired_rules, 1):
             lines.append(f"\n  Rule {i}: {rule.head.upper()}")

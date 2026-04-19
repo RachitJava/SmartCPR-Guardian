@@ -4,18 +4,17 @@ Flask + SocketIO web dashboard for live monitoring.
 Shows: ECG stream, vitals, FOLD-RM alerts, counterfactuals.
 """
 
-from flask import Flask, render_template_string, jsonify
+import eventlet
+eventlet.monkey_patch()
+print("Eventlet monkey patch applied at startup.")
+
+import os
+import sys
+from flask import Flask, render_template_string, jsonify, request
 from flask_socketio import SocketIO, emit
 import threading
 import time
 import json
-import sys
-import os
-import os
-if os.environ.get('PORT'):
-    import eventlet
-    eventlet.monkey_patch()
-
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,13 +29,29 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "smartcpr-guardian-2025"
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Global state
-classifier = FoldRMCardiacClassifier()
-extractor = ECGFeatureExtractor()
-dispatcher = EmergencyDispatcher()
-cf_generator = MC3GCounterfactualGenerator()
-monitoring_active = False
+# Global simulation state
 current_scenario = "normal"
+simulation_active = True
+SIMULATION_SETTINGS = {
+    "normal":         {"hr": 72, "spo2": 99, "bp": 120},
+    "vfib":           {"spo2": 75, "bp": 40},
+    "asystole":       {"spo2": 60, "bp": 30},
+    "bradycardia":    {"hr": 18, "spo2": 87, "bp": 58},
+    "pre_arrest":     {"hr": 18, "spo2": 87, "bp": 58},
+    "heart_failure":  {"hr": 105, "spo2": 89, "bp": 74},
+    "tachycardia":    {"hr": 190, "spo2": 94, "bp": 105}
+}
+
+print("Initializing AI components...")
+classifier = FoldRMCardiacClassifier()
+print("Classifier initialized.")
+extractor = ECGFeatureExtractor()
+print("Extractor initialized.")
+dispatcher = EmergencyDispatcher()
+print("Dispatcher initialized.")
+cf_generator = MC3GCounterfactualGenerator()
+print("CF Generator initialized.")
+monitoring_active = False
 alert_history = []
 
 HTML = """
@@ -233,6 +248,16 @@ HTML = """
 
   .section-title { font-size:0.78rem; font-weight:600; color:var(--muted);
     text-transform:uppercase; letter-spacing:0.1em; }
+    
+  /* Modal */
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; }
+  .modal-content { background:#111d2b; border:1px solid #2d3244; border-radius:16px; padding:28px; width:90%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); }
+  
+  /* Scrollbar override */
+  #settingsForm::-webkit-scrollbar { width:8px; }
+  #settingsForm::-webkit-scrollbar-track { background:#0a0c14; border-radius:10px; }
+  #settingsForm::-webkit-scrollbar-thumb { background:#3b82f6; border-radius:10px; }
+  #settingsForm::-webkit-scrollbar-thumb:hover { background:#60a5fa; }
 </style>
 </head>
 <body>
@@ -261,7 +286,10 @@ HTML = """
     <button class="btn btn-amber" onclick="setScenario('asystole')">📉 Asystole</button>
     <button class="btn btn-amber" onclick="setScenario('bradycardia')">🐌 Bradycardia</button>
     <button class="btn btn-blue"  onclick="setScenario('pre_arrest')">⚠️ Pre-Arrest</button>
+    <button class="btn btn-blue"  onclick="setScenario('heart_failure')">🫀 Heart Failure</button>
+    <button class="btn btn-purple" onclick="setScenario('tachycardia')">🏃 Tachycardia</button>
     <div style="margin-left:auto">
+      <button class="btn btn-blue" onclick="showSettings()">⚙️ Settings</button>
       <button class="btn btn-purple" onclick="showRules()">📋 View FOLD-RM Rules</button>
     </div>
   </div>
@@ -349,8 +377,8 @@ HTML = """
 </div>
 
 <!-- FOLD-RM Rules Modal -->
-<div id="rulesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:center;justify-content:center;">
-  <div style="background:#111827;border:1px solid #1f2937;border-radius:16px;padding:28px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;">
+<div id="rulesModal" class="modal">
+  <div class="modal-content" style="max-width:700px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <h3 style="color:#f9fafb">FOLD-RM Cardiac Arrest Rules (AHA 2022)</h3>
       <button onclick="document.getElementById('rulesModal').style.display='none'" style="background:none;border:none;color:#6b7280;font-size:1.5rem;cursor:pointer">✕</button>
@@ -359,9 +387,26 @@ HTML = """
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+  <div class="modal-content" style="max-width:800px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3>⚙️ Simulation Settings</h3>
+      <span class="close" onclick="closeSettings()" style="cursor:pointer;font-size:1.5rem">&times;</span>
+    </div>
+    <div id="settingsForm" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:20px;max-height:65vh;overflow-y:auto;padding:15px;margin-bottom:10px">
+      <!-- Generated by JS -->
+    </div>
+    <div style="margin-top:20px;text-align:right">
+      <button class="btn btn-blue" onclick="saveSettings()">💾 Save & Apply</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const socket = io();
 let ecgBuffer = Array(360).fill(0);
+let scenariosConfig = {};
 
 socket.on('connect', () => addLog('info', '🔗 Connected to SmartCPR Guardian server'));
 
@@ -467,9 +512,20 @@ function updateCounterfactuals(cfs) {
 function updateStatus(label, confidence) {
   const badge = document.getElementById('statusBadge');
   const text  = document.getElementById('statusText');
-  if (label !== 'normal') {
+  const conf = (confidence*100).toFixed(0);
+  
+  if (label === 'cardiac_arrest') {
     badge.className = 'status-badge alert';
-    text.textContent = '🚨 CARDIAC ARREST — ' + (confidence*100).toFixed(0) + '%';
+    text.textContent = '🚨 CARDIAC ARREST — ' + conf + '%';
+  } else if (label === 'heart_failure') {
+    badge.className = 'status-badge warning';
+    text.textContent = '🫀 HEART FAILURE — ' + conf + '%';
+  } else if (label === 'tachycardia') {
+    badge.className = 'status-badge warning';
+    text.textContent = '🏃 TACHY — ' + conf + '%';
+  } else if (label === 'pre_arrest_alert') {
+    badge.className = 'status-badge alert';
+    text.textContent = '⚠️ PRE-ARREST — ' + conf + '%';
   } else {
     badge.className = 'status-badge active';
     text.textContent = 'Monitoring Active';
@@ -478,13 +534,66 @@ function updateStatus(label, confidence) {
 }
 
 function setScenario(s) {
-  fetch('/set_scenario/' + s);
+  fetch('/api/scenario', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({scenario: s})
+  });
   const labels = {
     normal:'✅ Normal sinus rhythm',vfib:'⚡ VFib cardiac arrest',
     asystole:'📉 Asystole (flatline)',bradycardia:'🐌 Severe bradycardia',
-    pre_arrest:'⚠️ Pre-arrest state'
+    pre_arrest:'⚠️ Pre-arrest state', heart_failure:'🫀 Congestive Heart Failure',
+    tachycardia:'🏃 Supraventricular Tachycardia'
   };
   addLog('info', 'Scenario changed: ' + (labels[s]||s));
+}
+
+async function showSettings() {
+  const resp = await fetch('/api/settings');
+  scenariosConfig = await resp.json();
+  const form = document.getElementById('settingsForm');
+  
+  // Sort scenarios to keep Normal at top, others alphabetical
+  const keys = Object.keys(scenariosConfig).sort((a,b) => {
+    if (a === 'normal') return -1;
+    if (b === 'normal') return 1;
+    return a.localeCompare(b);
+  });
+
+  form.innerHTML = keys.map(s => {
+    const cfg = scenariosConfig[s];
+    const scenarioTitle = s.replace(/_/g, ' ').toUpperCase();
+    return `<div style="background:#1a1d29;padding:18px;border-radius:14px;border:1px solid #2d3244;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)">
+      <h4 style="margin-bottom:12px;color:var(--accent-purple);font-size:0.9rem">${scenarioTitle}</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${Object.keys(cfg).map(k => `
+          <div>
+            <label style="display:block;font-size:0.7rem;color:var(--muted);margin-bottom:4px">${k.toUpperCase()}</label>
+            <input type="number" id="set_${s}_${k}" value="${cfg[k]}" step="0.5"
+              style="width:100%;background:#0a0c14;border:1px solid #334155;color:white;padding:8px;border-radius:6px;font-size:0.85rem">
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('settingsModal').style.display='flex';
+}
+
+function closeSettings() { document.getElementById('settingsModal').style.display='none'; }
+
+async function saveSettings() {
+  for (let s in scenariosConfig) {
+    for (let k in scenariosConfig[s]) {
+      scenariosConfig[s][k] = parseFloat(document.getElementById(`set_${s}_${k}`).value);
+    }
+  }
+  await fetch('/api/settings', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(scenariosConfig)
+  });
+  addLog('info', 'Simulation settings updated successfully');
+  closeSettings();
 }
 
 function showRules() {
@@ -539,11 +648,21 @@ def index():
     return render_template_string(HTML)
 
 
-@app.route("/set_scenario/<scenario>")
-def set_scenario(scenario):
+@app.route('/api/settings', methods=['GET', 'POST'])
+def handle_settings():
+    global SIMULATION_SETTINGS
+    if request.method == 'POST':
+        SIMULATION_SETTINGS = request.json
+        return jsonify({"status": "success"})
+    return jsonify(SIMULATION_SETTINGS)
+
+
+@app.route('/api/scenario', methods=['POST'])
+def set_scenario():
     global current_scenario
-    current_scenario = scenario
-    return jsonify({"status": "ok", "scenario": scenario})
+    data = request.json
+    current_scenario = data.get("scenario", "normal")
+    return jsonify({"status": "ok", "scenario": current_scenario})
 
 
 @app.route("/fold_rules")
@@ -561,14 +680,19 @@ def monitoring_loop():
         try:
             # Generate vitals based on scenario
             sim = PatientVitalsSimulator
+            # Get targets from settings
+            st = SIMULATION_SETTINGS.get(current_scenario, {})
+            
             scenarios = {
-                "normal":       sim.normal,
-                "vfib":         sim.cardiac_arrest_vfib,
-                "asystole":     sim.cardiac_arrest_asystole,
-                "bradycardia":  sim.pre_arrest_bradycardia,
-                "pre_arrest":   sim.pre_arrest_bradycardia,
+                "normal":       lambda: sim.normal(**st),
+                "vfib":         lambda: sim.cardiac_arrest_vfib(**st),
+                "asystole":     lambda: sim.cardiac_arrest_asystole(**st),
+                "bradycardia":  lambda: sim.pre_arrest_bradycardia(**st),
+                "pre_arrest":   lambda: sim.pre_arrest_bradycardia(**st),
+                "heart_failure": lambda: sim.heart_failure(**st),
+                "tachycardia":  lambda: sim.tachycardia(**st),
             }
-            ecg, sensor_data = scenarios.get(current_scenario, sim.normal)()
+            ecg, sensor_data = scenarios.get(current_scenario, scenarios["normal"])()
 
             # Extract features
             features = extractor.extract(
@@ -625,5 +749,8 @@ def monitoring_loop():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
+    print(f"Starting SmartCPR Guardian on port {port}...")
+    
     socketio.start_background_task(target=monitoring_loop)
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    print("Background monitoring task started.")
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
