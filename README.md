@@ -1,5 +1,7 @@
 # 🫀 SmartCPR Guardian
 ## AI-Driven Wearable Cardiac Arrest Detection, Emergency Dispatch & Automated CPR System
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=render)](https://smartcpr-guardian.onrender.com/)
+
 ![Simulation CI](https://github.com/RachitJava/SmartCPR-Guardian/actions/workflows/simulation.yml/badge.svg)
 
 
