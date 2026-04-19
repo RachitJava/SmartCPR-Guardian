@@ -1,0 +1,10 @@
+numpy
+scipy
+flask
+flask-socketio
+plotly
+requests
+openai
+python-dotenv
+geopy
+eventlet
