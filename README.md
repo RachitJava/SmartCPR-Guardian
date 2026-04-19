@@ -38,9 +38,7 @@ This project directly extends Prof. Gupta's NSF-funded **Automated HF Diagnosis*
 
 ## 2. Problem Statement
 
-```
-mermaid
-
+```mermaid
 graph TD
     A["💔 Cardiac Arrest Occurs"] --> B["⏱️ Average Response Time: 8-12 min"]
     B --> C["📉 Survival drops 10% per minute"]
@@ -68,9 +66,7 @@ graph TD
 
 ## 3. Proposed Solution
 
-```
-mermaid
-
+```mermaid
 graph LR
     subgraph Device ["🩺 SmartCPR Guardian (Wearable)"]
         S1["ECG Sensor"] --> AI
@@ -95,9 +91,7 @@ graph LR
 
 ## 4. Full System Architecture
 
-```
-mermaid
-
+```mermaid
 graph TB
     subgraph HW ["🔧 Layer 1: Hardware Sensors (Tamil's Lab)"]
         ECG["ECG\n(3-lead)"]
@@ -158,9 +152,7 @@ graph TB
 
 ### 5.1 Physical Design
 
-```
-mermaid
-
+```mermaid
 graph LR
     subgraph Vest ["👕 SmartCPR Vest (Wearable)"]
         subgraph Front ["Front Panel"]
@@ -205,9 +197,7 @@ graph LR
 
 ### 5.3 CPR Mechanism Detail
 
-```
-mermaid
-
+```mermaid
 graph TD
     DETECT["Cardiac Arrest Confirmed\n(FOLD-RM Score > 99%)"] --> TIMER["⏱️ 5-second\nConfirmation Wait"]
     TIMER --> CHECK["❓ No Response\nfrom Patient?"]
@@ -233,9 +223,7 @@ graph TD
 
 ### 6.1 On-Device AI (Edge) — FOLD-RM
 
-```
-mermaid
-
+```mermaid
 graph LR
     subgraph INPUT ["📥 Input Features"]
         F1["Heart Rate"]
@@ -261,9 +249,7 @@ graph LR
 
 ### 6.2 Cloud AI — s(CASP) + MC3G + LLM
 
-```
-mermaid
-
+```mermaid
 graph TD
     EDGE["📲 Device sends:\nVitals + FOLD-RM rules\n+ Patient ID"] --> CLOUD
 
@@ -292,9 +278,7 @@ graph TD
 
 ## 7. Integration with Prof. Gupta's Lab
 
-```
-mermaid
-
+```mermaid
 graph LR
     subgraph GUPTA ["🎓 Gupta Lab (Existing)"]
         FOLDRM_G["FOLD-RM\n(Binary Classifier)"]
@@ -336,9 +320,7 @@ graph LR
 
 ## 8. Integration with Prof. Tamil's Lab
 
-```
-mermaid
-
+```mermaid
 graph TD
     subgraph TAMIL ["🔬 Tamil Lab (Existing)"]
         ECG_T["Wearable ECG\nSensor Platform"]
@@ -369,9 +351,7 @@ graph TD
 
 ### Tamil Lab API Integration Points
 
-```
-mermaid
-
+```mermaid
 sequenceDiagram
     participant Vest as SmartCPR Vest
     participant Tamil as Tamil IoT Platform
@@ -395,9 +375,7 @@ sequenceDiagram
 
 ## 9. Emergency Response Flow
 
-```
-mermaid
-
+```mermaid
 flowchart TD
     A["👤 Patient wearing SmartCPR"] --> B["📡 Continuous Monitoring\n(ECG, SpO2, BP, Motion)"]
     B --> C{"🧠 FOLD-RM\nDetects Anomaly?"}
@@ -438,9 +416,7 @@ flowchart TD
 
 ## 10. Development Phases
 
-```
-mermaid
-
+```mermaid
 gantt
     title SmartCPR Guardian — 12-Month Development Plan
     dateFormat  MM
@@ -504,9 +480,7 @@ gantt
 
 ## 12. Publication Roadmap
 
-```
-mermaid
-
+```mermaid
 graph LR
     P1["📄 Paper 1\n(Month 6)\nFOLD-RM for Real-Time\nCardiac Arrest Detection\n→ ICLP 2026 / AAAI 2026"]
     P2["📄 Paper 2\n(Month 9)\nCounterfactual Explanations\nfor Cardiac Events\n→ TPLP (Gupta's own journal!)"]
