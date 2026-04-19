@@ -11,6 +11,11 @@ import time
 import json
 import sys
 import os
+import os
+if os.environ.get('PORT'):
+    import eventlet
+    eventlet.monkey_patch()
+
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -620,6 +625,5 @@ def monitoring_loop():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
-    t = threading.Thread(target=monitoring_loop, daemon=True)
-    t.start()
+    socketio.start_background_task(target=monitoring_loop)
     socketio.run(app, host='0.0.0.0', port=port, debug=False)
