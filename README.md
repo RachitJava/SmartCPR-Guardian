@@ -22,6 +22,7 @@
 12. [Publication Roadmap](#12-publication-roadmap)
 13. [Getting Started](#13-getting-started)
 
+
 ---
 
 ## 1. Executive Summary
@@ -496,6 +497,45 @@ graph LR
     style P3 fill:#1b5e20,color:#fff
     style PAT fill:#e65100,color:#fff
 ```
+---
+
+## 13. Getting Started
+
+Follow these steps to run the **SmartCPR Guardian** prototype simulation on your local machine.
+
+### Prerequisites
+- Python 3.8+
+- `pip`
+
+### Installation
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/RachitJava/SmartCPR-Guardian.git
+   cd SmartCPR-Guardian
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Running the Prototype
+1. **Start Detection Simulation**: `python ai_engine/fold_rm.py`
+2. **Start Alert Dispatcher**: `python alert_system/dispatcher.py`
 
 ---
 
+## 📎 Supporting Materials Checklist
+- [ ] This proposal document (PDF export)
+- [ ] CV (Python/ML + Embedded exp)
+- [ ] Transcripts
+- [ ] GitHub showing relevant projects
+
+---
+
+> **Key References to Read:**
+> - FOLD-RM Paper: Wang, Shakerin, Gupta — TPLP 2022
+> - MC3G Paper: Dasgupta et al. — arXiv 2025
+> - AutoCompanion: Zeng et al. — TPLP Jan 2025
+> - CHF Advisory System: Chen, Gupta — ICLP 2016
+> - NSF Award #1916206 (HF Diagnosis project)
