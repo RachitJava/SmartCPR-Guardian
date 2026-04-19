@@ -20,7 +20,7 @@
 10. [Development Phases](#10-development-phases)
 11. [Dataset Plan](#11-dataset-plan)
 12. [Publication Roadmap](#12-publication-roadmap)
-13. [Getting Started](#13-getting-started)
+[🚀 Getting Started Guide](#-getting-started)
 
 
 ---
@@ -499,7 +499,7 @@ graph LR
 ```
 ---
 
-## 13. Getting Started
+## 🚀 Getting Started
 
 Follow these steps to run the **SmartCPR Guardian** prototype simulation on your local machine.
 
