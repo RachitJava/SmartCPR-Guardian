@@ -23,7 +23,7 @@ import numpy as np
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "smartcpr-guardian-2025"
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Global state
 classifier = FoldRMCardiacClassifier()
@@ -618,14 +618,8 @@ def monitoring_loop():
         time.sleep(1.5)
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("🫀 SmartCPR Guardian — Starting Dashboard")
-    print("=" * 60)
-    classifier.print_rules()
-    print("\n🌐 Dashboard: http://localhost:5050")
-    print("=" * 60)
-
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5050))
     t = threading.Thread(target=monitoring_loop, daemon=True)
     t.start()
-    socketio.run(app, host="0.0.0.0", port=5050, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
