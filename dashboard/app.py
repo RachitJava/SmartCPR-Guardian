@@ -51,8 +51,17 @@ dispatcher = EmergencyDispatcher()
 print("Dispatcher initialized.")
 cf_generator = MC3GCounterfactualGenerator()
 print("CF Generator initialized.")
-monitoring_active = False
-alert_history = []
+
+background_thread = None
+thread_lock = threading.Lock()
+
+@socketio.on('connect')
+def handle_connect():
+    global background_thread
+    with thread_lock:
+        if background_thread is None:
+            print("🚀 Starting background monitoring task...")
+            background_thread = socketio.start_background_task(target=monitoring_loop)
 
 HTML = """
 <!DOCTYPE html>
@@ -750,7 +759,4 @@ def monitoring_loop():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
     print(f"Starting SmartCPR Guardian on port {port}...")
-    
-    socketio.start_background_task(target=monitoring_loop)
-    print("Background monitoring task started.")
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
