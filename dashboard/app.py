@@ -738,7 +738,7 @@ def monitoring_loop():
                 "confidence": result["confidence"],
                 "fired_rules": result["fired_rules"],
                 "counterfactuals": cfs,
-                "ecg_sample": ecg[:180].tolist(),  # 0.5s chunk
+                "ecg_sample": ecg[:180].tolist(),  # 0.5s chunk @ 360Hz
             }
             socketio.emit("vitals_update", payload)
 
@@ -753,7 +753,7 @@ def monitoring_loop():
         except Exception as e:
             print(f"Monitoring error: {e}")
 
-        time.sleep(1.5)
+        time.sleep(0.5)
 
 
 if __name__ == '__main__':
