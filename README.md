@@ -1,5 +1,7 @@
 # 🫀 SmartCPR Guardian
 ## AI-Driven Wearable Cardiac Arrest Detection, Emergency Dispatch & Automated CPR System
+![Simulation CI](https://github.com/RachitJava/SmartCPR-Guardian/actions/workflows/simulation.yml/badge.svg)
+
 
 **Research Proposal for RA Position**
 **University of Texas at Dallas — Department of Computer Science**
